@@ -2,6 +2,7 @@
 // http://localhost:3000/isolated/exercise/06.js
 
 import * as React from 'react'
+import warning from 'warning'
 import {Switch} from '../switch'
 
 const callAll =
@@ -28,26 +29,93 @@ function toggleReducer(state, {type, initialState}) {
   }
 }
 
+function useControlledSwitchWarning(
+  controlledPropValue,
+  controlledPropName,
+  componentName,
+) {
+  const isControlled = controlledPropValue != null
+  const {current: wasControlled} = React.useRef(isControlled)
+  React.useEffect(() => {
+    warning(
+      !(isControlled && !wasControlled),
+      `\`${componentName}\` is changing from uncontrolled to be controlled. Components shoul not switch from uncontrolled to controlled (or vice versa). Decide between using an controlled or uncontrolled \`${componentName}\` for the lifetime of the component. Chekc the \`${controlledPropName}\` prop.`,
+    )
+    warning(
+      !(!isControlled && wasControlled),
+      `\`${componentName}\` is changing from controlled to be uncontrolled. Components shoul not switch from uncontrolled to controlled (or vice versa). Decide between using an controlled or uncontrolled \`${componentName}\` for the lifetime of the component. Chekc the \`${controlledPropName}\` prop.`,
+    )
+  }, [
+    isControlled,
+    wasControlled,
+    componentName,
+    controlledPropName,
+    controlledPropValue,
+  ])
+}
+
+function useOnChangeReadOnlyWarning(
+  controlPropValue,
+  controlPropName,
+  componentName,
+  hasOnChange,
+  readOnly,
+  readOnlyProp,
+  initialValueProp,
+  onChangeProp,
+) {
+  const isControlled = controlPropValue != null
+  React.useEffect(() => {
+    warning(
+      !(!hasOnChange && isControlled && !readOnly),
+      `A \`${controlPropName}\` prop was provided to \`${componentName}\` without an \`${onChangeProp}\` handler. This will result in a read-only \`${controlPropName}\` value. If you want it to be mutable, use \`${initialValueProp}\`. Otherwise, set either \`${onChangeProp}\` or \`${readOnlyProp}\`.`,
+    )
+  }, [
+    componentName,
+    controlPropName,
+    isControlled,
+    hasOnChange,
+    readOnly,
+    onChangeProp,
+    initialValueProp,
+    readOnlyProp,
+  ])
+}
+
 function useToggle({
   initialOn = false,
   reducer = toggleReducer,
   onChange,
   on: controlledOn,
+  readOnly = false,
 } = {}) {
   const {current: initialState} = React.useRef({on: initialOn})
   const [state, dispatch] = React.useReducer(reducer, initialState)
   const onIsControlled = controlledOn != null
   const on = onIsControlled ? controlledOn : state.on
 
+  useControlledSwitchWarning(controlledOn, 'on', 'useToggle')
+  useOnChangeReadOnlyWarning(
+    controlledOn,
+    'on',
+    'useToggle',
+    Boolean(onChange),
+    readOnly,
+    'readOnly',
+    'initialOn',
+    'onChange',
+  )
+
   function dispatchWithOnChange(action) {
-    if(!onIsControlled) {
+    if (!onIsControlled) {
       dispatch(action)
     }
     onChange?.(reducer({...state, on}, action), action)
   }
 
   const toggle = () => dispatchWithOnChange({type: actionTypes.toggle})
-  const reset = () => dispatchWithOnChange({type: actionTypes.reset, initialState})
+  const reset = () =>
+    dispatchWithOnChange({type: actionTypes.reset, initialState})
 
   function getTogglerProps({onClick, ...props} = {}) {
     return {
@@ -73,12 +141,13 @@ function useToggle({
   }
 }
 
-function Toggle({on: controlledOn, onChange, initialOn, reducer}) {
+function Toggle({on: controlledOn, onChange, initialOn, reducer, readOnly}) {
   const {on, getTogglerProps} = useToggle({
     on: controlledOn,
     onChange,
     initialOn,
     reducer,
+    readOnly,
   })
   const props = getTogglerProps({on})
   return <Switch {...props} />
