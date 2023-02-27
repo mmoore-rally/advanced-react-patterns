@@ -39,11 +39,11 @@ function useControlledSwitchWarning(
   React.useEffect(() => {
     warning(
       !(isControlled && !wasControlled),
-      `\`${componentName}\` is changing from uncontrolled to be controlled. Components shoul not switch from uncontrolled to controlled (or vice versa). Decide between using an controlled or uncontrolled \`${componentName}\` for the lifetime of the component. Chekc the \`${controlledPropName}\` prop.`,
+      `\`${componentName}\` is changing from uncontrolled to controlled. Components shoul not switch from uncontrolled to controlled (or vice versa). Decide between using an controlled or uncontrolled \`${componentName}\` for the lifetime of the component. Chekc the \`${controlledPropName}\` prop.`,
     )
     warning(
       !(!isControlled && wasControlled),
-      `\`${componentName}\` is changing from controlled to be uncontrolled. Components shoul not switch from uncontrolled to controlled (or vice versa). Decide between using an controlled or uncontrolled \`${componentName}\` for the lifetime of the component. Chekc the \`${controlledPropName}\` prop.`,
+      `\`${componentName}\` is changing from controlled to uncontrolled. Components shoul not switch from uncontrolled to controlled (or vice versa). Decide between using an controlled or uncontrolled \`${componentName}\` for the lifetime of the component. Chekc the \`${controlledPropName}\` prop.`,
     )
   }, [
     isControlled,
@@ -94,17 +94,21 @@ function useToggle({
   const onIsControlled = controlledOn != null
   const on = onIsControlled ? controlledOn : state.on
 
-  useControlledSwitchWarning(controlledOn, 'on', 'useToggle')
-  useOnChangeReadOnlyWarning(
-    controlledOn,
-    'on',
-    'useToggle',
-    Boolean(onChange),
-    readOnly,
-    'readOnly',
-    'initialOn',
-    'onChange',
-  )
+  if (process.env.NODE_ENV !== 'production') {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    useControlledSwitchWarning(controlledOn, 'on', 'useToggle')
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    useOnChangeReadOnlyWarning(
+      controlledOn,
+      'on',
+      'useToggle',
+      Boolean(onChange),
+      readOnly,
+      'readOnly',
+      'initialOn',
+      'onChange',
+    )
+  }
 
   function dispatchWithOnChange(action) {
     if (!onIsControlled) {
